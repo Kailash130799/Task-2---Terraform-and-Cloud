@@ -13,10 +13,10 @@ resource "aws_subnet" "public" {
   count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = "${var.aws_region}${element(list("a", "b"), count.index)}"
+  availability_zone       = "${var.aws_region}${element(tolist(["a", "b"]), count.index)}"
   map_public_ip_on_launch = true
   tags = {
-    Name = "public-subnet-${element(list("a", "b"), count.index)}"
+    Name = "public-subnet-${element(tolist(["a", "b"]), count.index)}"
   }
 }
 
@@ -25,9 +25,9 @@ resource "aws_subnet" "private" {
   count                   = length(var.private_subnet_cidrs)
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.private_subnet_cidrs[count.index]
-  availability_zone       = "${var.aws_region}${element(list("a", "b"), count.index)}"
+  availability_zone       = "${var.aws_region}${element(tolist(["a", "b"]), count.index)}"
   tags = {
-    Name = "private-subnet-${element(list("a", "b"), count.index)}"
+    Name = "private-subnet-${element(tolist(["a", "b"]), count.index)}"
   }
 }
 
@@ -63,7 +63,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
-    tags = {
+  tags = {
     Name = "nat-gateway"
   }
 }
@@ -71,7 +71,7 @@ resource "aws_nat_gateway" "nat" {
 # Elastic IP for NAT Gateway
 resource "aws_eip" "nat" {
   domain = "vpc"
-    tags = {
+  tags = {
     Name = "nat-eip"
   }
 }
@@ -79,7 +79,7 @@ resource "aws_eip" "nat" {
 # Private Route Table
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-    tags = {
+  tags = {
     Name = "private-route-table"
   }
 }
@@ -104,7 +104,7 @@ resource "aws_ecs_cluster" "main" {
 # ECR Repository
 resource "aws_ecr_repository" "app" {
   name = "app-repo"
-    tags = {
+  tags = {
     Name = "app-repo"
   }
 }
@@ -175,7 +175,8 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "ecs_task_execution_role_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+  name       = "ecs_task_execution_role_policy"
+  roles      = [aws_iam_role.ecs_task_execution_role.name]
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
@@ -197,7 +198,7 @@ resource "aws_security_group" "ecs_tasks" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-    tags = {
+  tags = {
     Name = "ecs-tasks-sg"
   }
 }
@@ -209,7 +210,7 @@ resource "aws_lb" "main" {
   security_groups    = [aws_security_group.lb.id]
   internal           = false
   load_balancer_type = "application"
-    tags = {
+  tags = {
     Name = "application-load-balancer"
   }
 }
@@ -232,7 +233,7 @@ resource "aws_security_group" "lb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-    tags = {
+  tags = {
     Name = "loadbalancer-sg"
   }
 }
@@ -244,7 +245,7 @@ resource "aws_lb_target_group" "app" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
-    tags = {
+  tags = {
     Name = "app-target-group"
   }
 }
